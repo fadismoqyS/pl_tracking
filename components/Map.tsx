@@ -569,6 +569,14 @@ export default function MapComponent() {
                                     setSelectedLiveUserId((prev) =>
                                         prev === loc.user_id ? null : loc.user_id
                                     );
+                                    // Beim Klick auf Standort auch zur Position zoomen – wie bei Pins
+                                    if (mapRef.current) {
+                                        mapRef.current.flyTo({
+                                            center: [loc.longitude, loc.latitude],
+                                            zoom: 16,
+                                            duration: 1000
+                                        });
+                                    }
                                 }}
                             >
                                 <div className="flex flex-col items-center">
