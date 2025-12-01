@@ -588,14 +588,21 @@ export default function MapComponent() {
                                             {`Zuletzt online: ${date} ${time}`}
                                         </div>
                                     )}
-                                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500 shadow-lg bg-white">
+                                    {/* Live-Standort als Location-Pin (kleiner Kreis + Spitze, Farbe = Online-Status) */}
+                                    <div
+                                        className="relative w-10 h-10 rounded-full overflow-hidden border-[5px] shadow-lg bg-white"
+                                        style={{ borderColor: isOnline ? "#22c55e" : "#9ca3af" }} // grün oder grau
+                                    >
                                         <img
                                             src={loc.users?.avatar_url || "/manLOgo.jpeg"}
                                             alt={loc.users?.username || "User"}
                                             className="w-full h-full object-cover"
                                         />
                                     </div>
-                                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-purple-500 -mt-1" />
+                                    <div
+                                        className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[7px] -mt-0.5"
+                                        style={{ borderTopColor: isOnline ? "#22c55e" : "#9ca3af" }}
+                                    />
                                 </div>
                             </Marker>
                         );
@@ -611,7 +618,11 @@ export default function MapComponent() {
                                     className="relative w-10 h-10 rounded-full border-2 shadow-md overflow-hidden bg-white flex items-center justify-center"
                                     style={{ borderColor: '#8B5CF6' }}
                                 >
-                                    <Plus className="w-6 h-6 text-purple-600" />
+                                    <img
+                                        src="/poop.png"
+                                        alt="Poop"
+                                        className="w-5 h-5 object-contain"
+                                    />
                                 </div>
                             </div>
                             <div
@@ -649,7 +660,7 @@ export default function MapComponent() {
                                 // Calculate number of icons based on radius
                                 // More radius = more poop icons, but maximum 15 icons
                                 // Formula: 3 icons for small radius, up to 15 icons for large radius
-                                const iconCount = Math.min(Math.max(Math.floor(pin.radius / 350), 5), 20);
+                                const iconCount = Math.min(Math.max(Math.floor(pin.radius / 350), 3), 15);
 
                                 // Fixed distance: etwas weiter weg, aber noch nah am Pin
                                 const radiusOffset = 30; // kleiner Abstand vom Pin-Bild
