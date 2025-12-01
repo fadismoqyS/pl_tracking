@@ -20,6 +20,11 @@
 # production
 /build
 
+# Capacitor
+/ios/App/Pods/
+/ios/App/build/
+/ios/App/Podfile.lock
+
 # misc
 .DS_Store
 *.pem
