@@ -38,8 +38,20 @@ type Pin = {
     };
 };
 
-// Use a free Carto style that doesn't require an API key
-const MAP_STYLE_STANDARD = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+type LiveUserLocation = {
+    user_id: string;
+    latitude: number;
+    longitude: number;
+    updated_at: string;
+    users?: {
+        username: string;
+        avatar_url?: string;
+    };
+};
+
+// Helle, weiße Standardkarte (wie am Anfang)
+const MAP_STYLE_STANDARD =
+    "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 // Satellite style using Esri World Imagery with detailed labels (free, no API key required)
 const MAP_STYLE_SATELLITE: any = {
@@ -118,6 +130,7 @@ export default function MapComponent() {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
     const [mapType, setMapType] = useState<"standard" | "satellite">("standard");
+    const [liveUsers, setLiveUsers] = useState<LiveUserLocation[]>([]);
 
     // Fetch pins from Supabase
     const fetchPins = useCallback(async () => {
@@ -227,6 +240,87 @@ export default function MapComponent() {
         }
     }, []);
 
+    // Continuously update own live location while page is open
+    useEffect(() => {
+        if (!user) return;
+        if (!("geolocation" in navigator)) return;
+
+        const watchId = navigator.geolocation.watchPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                setUserLocation({ lat: latitude, lng: longitude });
+
+                try {
+                    await supabase.from("user_locations").upsert({
+                        user_id: user.id,
+                        latitude,
+                        longitude,
+                        updated_at: new Date().toISOString()
+                    });
+                } catch (e) {
+                    console.error("Error updating live location:", e);
+                }
+            },
+            (error) => {
+                console.error("Error watching location:", error);
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 5000,
+                timeout: 10000
+            }
+        );
+
+        return () => {
+            navigator.geolocation.clearWatch(watchId);
+        };
+    }, [user]);
+
+    // Fetch & subscribe to all users' live locations
+    useEffect(() => {
+        const fetchLocations = async () => {
+            const { data, error } = await supabase
+                .from("user_locations")
+                .select("*, users(username, avatar_url)");
+
+            if (!error && data) {
+                setLiveUsers(data as LiveUserLocation[]);
+            }
+        };
+
+        fetchLocations();
+
+        const channel = supabase
+            .channel("user_locations_live")
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "user_locations" },
+                (payload) => {
+                    setLiveUsers((prev) => {
+                        const list = [...prev];
+                        if (payload.eventType === "DELETE") {
+                            return list.filter(
+                                (l) => l.user_id !== (payload.old as any).user_id
+                            );
+                        }
+                        const row = payload.new as any;
+                        const idx = list.findIndex((l) => l.user_id === row.user_id);
+                        if (idx >= 0) {
+                            list[idx] = { ...list[idx], ...row };
+                        } else {
+                            list.push(row);
+                        }
+                        return list;
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     const handleAddPin = async (title: string, description: string, placeId: string | null, radius: number, cameraImage?: File) => {
         if (!user || !newPinPosition || !placeId) return;
 
@@ -257,10 +351,10 @@ export default function MapComponent() {
                 .from("pins")
                 .insert([
                     {
-                title,
-                description,
-                latitude: newPinPosition.lat,
-                longitude: newPinPosition.lng,
+                        title,
+                        description,
+                        latitude: newPinPosition.lat,
+                        longitude: newPinPosition.lng,
                         place_id: placeId,
                         user_id: user.id,
                         radius: radius,
@@ -307,8 +401,8 @@ export default function MapComponent() {
                     message: `hat einen neuen PL von ${placeName} in ${cityName} platziert`,
                     message_type: "pin_notification",
                     pin_id: pinData.id
-            },
-        ]);
+                },
+            ]);
 
             setToast({ message: "Pin erfolgreich erstellt!", type: "success" });
             setIsModalOpen(false);
@@ -445,6 +539,30 @@ export default function MapComponent() {
                         </div>
                     </Marker>
                 )}
+
+                {/* Live user locations with profile images */}
+                {liveUsers.map((loc) => (
+                    <Marker
+                        key={loc.user_id}
+                        longitude={loc.longitude}
+                        latitude={loc.latitude}
+                        anchor="center"
+                    >
+                        <div className="flex flex-col items-center">
+                            <div className="mb-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white">
+                                {`Standort von ${loc.users?.username || "Nutzer"}`}
+                            </div>
+                            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500 shadow-lg bg-white">
+                                <img
+                                    src={loc.users?.avatar_url || "/manLOgo.jpeg"}
+                                    alt={loc.users?.username || "User"}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-purple-500 -mt-1" />
+                        </div>
+                    </Marker>
+                ))}
 
                 {/* New Pin Position Marker */}
                 {newPinPosition && (
