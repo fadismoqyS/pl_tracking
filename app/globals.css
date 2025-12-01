@@ -233,7 +233,7 @@ body {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   /* Prevent bounce effect on iOS */
-  overscroll-behavior-y: none; 
+  overscroll-behavior-y: none;
 }
 
 /* Safe Area Utilities */
@@ -254,7 +254,8 @@ body {
 }
 
 /* Input fields should still be selectable */
-input, textarea {
+input,
+textarea {
   user-select: text;
   -webkit-user-select: text;
 }
@@ -523,9 +524,12 @@ input[type="range"]::-moz-range-track {
 
 /* Native iOS-style bounce animation for PL pin icons */
 @keyframes poopBounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-10px);
   }
@@ -543,18 +547,22 @@ input[type="range"]::-moz-range-track {
     opacity: 0;
     transform: translate(-50%, 0px) scale(0.3) rotate(0deg);
   }
+
   20% {
     opacity: 1;
-    transform: translate(-50%, -8px) scale(0.8) rotate(5deg);
+    transform: translate(-70%, -8px) scale(0.8) rotate(5deg);
   }
+
   50% {
     opacity: 1;
     transform: translate(-50%, -18px) scale(1) rotate(-5deg);
   }
+
   80% {
     opacity: 0.8;
     transform: translate(-50%, -28px) scale(0.9) rotate(3deg);
   }
+
   100% {
     opacity: 0;
     transform: translate(-50%, -40px) scale(0.5) rotate(-10deg);
@@ -566,18 +574,22 @@ input[type="range"]::-moz-range-track {
     opacity: 0;
     transform: translate(-50%, -40px) scale(0.3) rotate(0deg);
   }
+
   20% {
     opacity: 1;
     transform: translate(-50%, -28px) scale(0.8) rotate(-5deg);
   }
+
   50% {
     opacity: 1;
     transform: translate(-50%, -18px) scale(1) rotate(5deg);
   }
+
   80% {
     opacity: 0.8;
     transform: translate(-50%, -8px) scale(0.9) rotate(-3deg);
   }
+
   100% {
     opacity: 0;
     transform: translate(-50%, 0px) scale(0.5) rotate(10deg);

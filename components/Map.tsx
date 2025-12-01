@@ -131,6 +131,7 @@ export default function MapComponent() {
     const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
     const [mapType, setMapType] = useState<"standard" | "satellite">("standard");
     const [liveUsers, setLiveUsers] = useState<LiveUserLocation[]>([]);
+    const [selectedLiveUserId, setSelectedLiveUserId] = useState<string | null>(null);
 
     // Fetch pins from Supabase
     const fetchPins = useCallback(async () => {
@@ -540,29 +541,65 @@ export default function MapComponent() {
                     </Marker>
                 )}
 
-                {/* Live user locations with profile images */}
-                {liveUsers.map((loc) => (
-                    <Marker
-                        key={loc.user_id}
-                        longitude={loc.longitude}
-                        latitude={loc.latitude}
-                        anchor="center"
-                    >
-                        <div className="flex flex-col items-center">
-                            <div className="mb-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white">
-                                {`Standort von ${loc.users?.username || "Nutzer"}`}
-                            </div>
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500 shadow-lg bg-white">
-                                <img
-                                    src={loc.users?.avatar_url || "/manLOgo.jpeg"}
-                                    alt={loc.users?.username || "User"}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-purple-500 -mt-1" />
-                        </div>
-                    </Marker>
-                ))}
+                {/* Live user locations with profile images (only other users, not yourself) */}
+                {liveUsers
+                    .filter((loc) => !user || loc.user_id !== user.id)
+                    .map((loc) => {
+                        const lastSeenDate = new Date(loc.updated_at);
+                        const time = lastSeenDate.toLocaleTimeString("de-DE", {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                        });
+                        const date = lastSeenDate.toLocaleDateString("de-DE", {
+                            day: "2-digit",
+                            month: "2-digit"
+                        });
+                        const diffMs = Date.now() - lastSeenDate.getTime();
+                        const isOnline = diffMs < 2 * 60 * 1000; // innerhalb der letzten 2 Minuten aktiv
+                        const isSelected = selectedLiveUserId === loc.user_id;
+
+                        return (
+                            <Marker
+                                key={loc.user_id}
+                                longitude={loc.longitude}
+                                latitude={loc.latitude}
+                                anchor="center"
+                                onClick={(e) => {
+                                    e.originalEvent.stopPropagation();
+                                    setSelectedLiveUserId((prev) =>
+                                        prev === loc.user_id ? null : loc.user_id
+                                    );
+                                }}
+                            >
+                                <div className="flex flex-col items-center">
+                                    <div className="mb-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white text-center flex items-center gap-1">
+                                        <span>
+                                            {`Standort von ${loc.users?.username || "Nutzer"}`}
+                                        </span>
+                                        {isOnline ? (
+                                            <span className="inline-flex w-2.5 h-2.5 rounded-full bg-green-400 border border-white" />
+                                        ) : (
+                                            <span className="inline-flex w-2.5 h-2.5 rounded-full bg-gray-400 border border-white" />
+                                        )}
+                                    </div>
+                                    {/* Zuletzt online nur anzeigen, wenn Nutzer offline und Marker angeklickt */}
+                                    {!isOnline && isSelected && (
+                                        <div className="mb-1 rounded-full bg-black/80 px-2 py-0.5 text-[9px] text-gray-200 text-center">
+                                            {`Zuletzt online: ${date} ${time}`}
+                                        </div>
+                                    )}
+                                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500 shadow-lg bg-white">
+                                        <img
+                                            src={loc.users?.avatar_url || "/manLOgo.jpeg"}
+                                            alt={loc.users?.username || "User"}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-purple-500 -mt-1" />
+                                </div>
+                            </Marker>
+                        );
+                    })}
 
                 {/* New Pin Position Marker */}
                 {newPinPosition && (
@@ -612,10 +649,10 @@ export default function MapComponent() {
                                 // Calculate number of icons based on radius
                                 // More radius = more poop icons, but maximum 15 icons
                                 // Formula: 3 icons for small radius, up to 15 icons for large radius
-                                const iconCount = Math.min(Math.max(Math.floor(pin.radius / 350), 3), 15);
+                                const iconCount = Math.min(Math.max(Math.floor(pin.radius / 350), 5), 20);
 
-                                // Fixed smaller distance to keep icons close to pin at all zoom levels
-                                const radiusOffset = 18; // Fixed distance in pixels - close to pin
+                                // Fixed distance: etwas weiter weg, aber noch nah am Pin
+                                const radiusOffset = 30; // kleiner Abstand vom Pin-Bild
 
                                 return [...Array(iconCount)].map((_, i) => {
                                     const angle = (i * 360 / iconCount) * (Math.PI / 180); // Distribute evenly around the pin
@@ -635,7 +672,7 @@ export default function MapComponent() {
                                             <img
                                                 src="/poop.png"
                                                 alt="Floating poop"
-                                                className="w-4 h-4 opacity-75 drop-shadow-lg"
+                                                className="w-6 h-6 opacity-75 drop-shadow-lg"
                                             />
                                         </div>
                                     );
